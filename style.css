@@ -1,0 +1,380 @@
+/* ============================================
+   VARIABLES GLOBALES — Colores por categoría
+   ============================================ */
+:root {
+  --color-bg: #F5F5F7;
+  --color-texto: #1A1A1A;
+  --color-texto-suave: #5A5A5A;
+  --color-header: #0D1B2A;
+  --color-borde: #E0E0E0;
+
+  /* Colores de categoría */
+  --cat-el-patio: #D32F2F;
+  --cat-en-la-calle: #F57C00;
+  --cat-la-ola: #2E7D32;
+  --cat-la-chacara: #8E24AA;
+  --cat-la-birria: #1976D2;
+  --cat-mundo: #455A64;
+  --cat-vecinos: #00838F;
+  --cat-tecnologia: #5E35B1;
+}
+
+/* ============================================
+   RESET BÁSICO
+   ============================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-texto);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+.app-header {
+  background: var(--color-header);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 8px;
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo-pty { color: #FFB300; }
+
+.fecha-hoy {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* ============================================
+   FILTROS — Una sola fila deslizable con flechas
+   ============================================ */
+.filtros-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filtros {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 14px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;              /* Firefox */
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+}
+.filtros::-webkit-scrollbar { display: none; }  /* Chrome/Android */
+
+/* Degradado en los bordes: señal visual de "hay más" */
+.filtros.fade-der { -webkit-mask-image: linear-gradient(to right, #000 82%, transparent); mask-image: linear-gradient(to right, #000 82%, transparent); }
+.filtros.fade-izq { -webkit-mask-image: linear-gradient(to left, #000 82%, transparent); mask-image: linear-gradient(to left, #000 82%, transparent); }
+.filtros.fade-izq.fade-der {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+}
+
+.flecha {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: #FFB300;
+  color: var(--color-header);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  padding-bottom: 3px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flecha[hidden] { display: none; }
+.flecha-izq { left: 6px; }
+.flecha-der { right: 6px; animation: empujon 1.6s ease-in-out 0.6s 2; }
+
+/* Pequeño "empujón" al abrir la app para llamar la atención sobre la flecha */
+@keyframes empujon {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(4px); }
+}
+
+.btn-filtro {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 14px;
+  border-radius: 20px; /* Forma de píldora */
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap; /* Evita que el texto se parta en dos líneas */
+  flex-shrink: 0;
+}
+
+.btn-filtro:hover { background: rgba(255,255,255,0.2); }
+
+.btn-filtro.activo {
+  background: #FFB300;
+  color: var(--color-header);
+  border-color: #FFB300;
+  font-weight: 600;
+}
+
+/* ============================================
+   AVISO SIN CONEXIÓN
+   ============================================ */
+.aviso-offline {
+  background: #FFB300;
+  color: var(--color-header);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+.aviso-offline[hidden] { display: none; }
+
+/* ============================================
+   GRID DE NOTICIAS
+   ============================================ */
+.contenedor-principal {
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.grid-noticias {
+  display: grid;
+  gap: 16px;
+}
+
+/* ============================================
+   TARJETA DE NOTICIA
+   ============================================ */
+.tarjeta-noticia {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tarjeta-noticia:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.noticia-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #ddd;
+  display: block;
+}
+
+.noticia-cuerpo { padding: 14px 16px 16px; }
+
+/* Bloque de categoría cuando la noticia no tiene imagen (o falla) */
+.noticia-img.placeholder {
+  height: 56px;
+  background: var(--cat-mundo);
+}
+.noticia-img.placeholder.el-patio    { background: linear-gradient(135deg, var(--cat-el-patio), #8E1B1B); }
+.noticia-img.placeholder.en-la-calle { background: linear-gradient(135deg, var(--cat-en-la-calle), #A84F00); }
+.noticia-img.placeholder.la-ola      { background: linear-gradient(135deg, var(--cat-la-ola), #174A1A); }
+.noticia-img.placeholder.la-chacara  { background: linear-gradient(135deg, var(--cat-la-chacara), #5A1470); }
+.noticia-img.placeholder.la-birria   { background: linear-gradient(135deg, var(--cat-la-birria), #0D4A8A); }
+.noticia-img.placeholder.mundo       { background: linear-gradient(135deg, var(--cat-mundo), #263238); }
+.noticia-img.placeholder.vecinos     { background: linear-gradient(135deg, var(--cat-vecinos), #004D55); }
+.noticia-img.placeholder.tecnologia  { background: linear-gradient(135deg, var(--cat-tecnologia), #311B78); }
+
+/* Header de la tarjeta (Etiqueta + Estrella) */
+.noticia-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.etiqueta {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+/* Colores dinámicos por categoría */
+.etiqueta.el-patio     { background: var(--cat-el-patio); }
+.etiqueta.en-la-calle  { background: var(--cat-en-la-calle); }
+.etiqueta.la-ola       { background: var(--cat-la-ola); }
+.etiqueta.la-chacara   { background: var(--cat-la-chacara); }
+.etiqueta.la-birria    { background: var(--cat-la-birria); }
+.etiqueta.mundo        { background: var(--cat-mundo); }
+.etiqueta.vecinos      { background: var(--cat-vecinos); }
+.etiqueta.tecnologia   { background: var(--cat-tecnologia); }
+
+/* Botón de Favorito (Estrella) */
+.btn-favorito {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-favorito:hover { transform: scale(1.2); }
+.btn-favorito.activo { color: #FFB300; }
+.btn-favorito.activo:hover { color: #FFA000; }
+
+.noticia-cuerpo h3 {
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  color: var(--color-texto);
+}
+
+.noticia-cuerpo p {
+  font-size: 0.9rem;
+  color: var(--color-texto-suave);
+  margin-bottom: 12px;
+}
+
+.noticia-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.btn-leer {
+  background: var(--color-header);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-leer:hover { background: #1B263B; }
+.btn-leer.deshabilitado { opacity: 0.4; cursor: default; }
+.btn-leer.deshabilitado:hover { background: var(--color-header); }
+
+/* ============================================
+   ESTADOS: vacío, skeleton y error
+   ============================================ */
+.sin-noticias {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-texto-suave);
+  font-style: italic;
+}
+
+.skeleton {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.skeleton-img {
+  height: 180px;
+  background: linear-gradient(90deg, #eee 25%, #e0e0e0 50%, #eee 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-linea {
+  height: 14px;
+  margin: 14px 16px;
+  background: linear-gradient(90deg, #eee 25%, #e0e0e0 50%, #eee 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-linea.corta { width: 40%; }
+.skeleton-linea.larga { width: 85%; }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.estado-error {
+  text-align: center;
+  padding: 40px 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.estado-error p {
+  color: var(--color-texto-suave);
+  margin-bottom: 8px;
+}
+
+.estado-error p:first-child {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.btn-reintentar {
+  margin-top: 16px;
+  background: var(--color-header);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-reintentar:hover { background: #1B263B; }
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.app-footer {
+  text-align: center;
+  padding: 24px 16px;
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}

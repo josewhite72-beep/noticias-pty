@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0D1B2A">
+  <meta name="description" content="Noticias de Panamá organizadas por categorías. Rápido, limpio, sin publicidad.">
+  <title>Noticias_pty — Panamá al minuto</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Iconos para iOS (Apple) -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <!-- Favicon clásico para pestañas del navegador -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-top">
+      <h1 class="logo">Noticias<span class="logo-pty">_pty</span></h1>
+      <span class="fecha-hoy" id="fecha-hoy"></span>
+    </div>
+
+    <!-- FILTROS: una sola fila deslizable con flechas indicadoras -->
+    <div class="filtros-wrap">
+      <button class="flecha flecha-izq" id="flecha-izq" aria-label="Ver categorías anteriores" hidden>‹</button>
+      <nav class="filtros" id="filtros" aria-label="Filtros de categorías">
+        <button class="btn-filtro activo" data-categoria="todas">Todas</button>
+        <button class="btn-filtro" data-categoria="el-patio">El patio</button>
+        <button class="btn-filtro" data-categoria="en-la-calle">En la calle</button>
+        <button class="btn-filtro" data-categoria="la-ola">La Ola</button>
+        <button class="btn-filtro" data-categoria="la-chacara">La Chácara</button>
+        <button class="btn-filtro" data-categoria="la-birria">La Birria</button>
+        <button class="btn-filtro" data-categoria="mundo">Mundo</button>
+        <button class="btn-filtro" data-categoria="vecinos">Vecinos</button>
+        <button class="btn-filtro" data-categoria="tecnologia">Tecnología</button>
+        <button class="btn-filtro" data-categoria="favoritos">★ Favoritos</button>
+      </nav>
+      <button class="flecha flecha-der" id="flecha-der" aria-label="Ver más categorías" hidden>›</button>
+    </div>
+  </header>
+
+  <!-- Aviso de modo sin conexión -->
+  <div class="aviso-offline" id="aviso-offline" hidden>Sin conexión · mostrando noticias guardadas</div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="contenedor-principal">
+    <div id="contenedor-noticias" class="grid-noticias">
+      <!-- Las tarjetas se inyectan aquí desde app.js -->
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>Noticias_pty · Hecho en Panamá 🇵🇦</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

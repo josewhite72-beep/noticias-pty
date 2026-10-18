@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "titulo": "Lanzan nuevo plan de movilidad para la Vía España",
+    "categoria": "en-la-calle",
+    "origen": "nacional",
+    "resumen": "La ATTT anunció cambios en los giros a la izquierda para agilizar el flujo vehicular en hora pico.",
+    "fecha": "2026-10-18",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 2,
+    "titulo": "El Canal de Panamá alcanza cifras récord de tránsito",
+    "categoria": "la-ola",
+    "origen": "nacional",
+    "resumen": "Gracias a las lluvias recientes, las operaciones se normalizaron superando las expectativas del trimestre.",
+    "fecha": "2026-10-18",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 3,
+    "titulo": "Asamblea discute reforma al sistema de pensiones",
+    "categoria": "el-patio",
+    "origen": "nacional",
+    "resumen": "Diputados presentan proyecto que busca ampliar la cobertura y ajustar la edad de jubilación gradualmente.",
+    "fecha": "2026-10-17",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 4,
+    "titulo": "Festival del Manito Obrero vuelve a Chitré con artistas nacionales",
+    "categoria": "la-chacara",
+    "origen": "nacional",
+    "resumen": "La edición 2026 reunirá a más de 30 agrupaciones folclóricas y urbanos durante tres días en el interior.",
+    "fecha": "2026-10-17",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 5,
+    "titulo": "Tauro FC lidera la LPF tras goleada en el Rommel Fernández",
+    "categoria": "la-birria",
+    "origen": "nacional",
+    "resumen": "El equipo aurinegro se consolida en la cima del torneo con una actuación dominante frente a San Francisco FC.",
+    "fecha": "2026-10-18",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 6,
+    "titulo": "Cumbre global de IA presenta nuevas regulaciones",
+    "categoria": "tecnologia",
+    "origen": "internacional",
+    "resumen": "Expertos debaten sobre el impacto en el empleo técnico y los marcos legales para modelos generativos.",
+    "fecha": "2026-10-18",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 7,
+    "titulo": "Elecciones en Brasil marcan la agenda regional",
+    "categoria": "vecinos",
+    "origen": "internacional",
+    "resumen": "Los comicios brasileños tendrán impacto directo en las relaciones comerciales con Panamá y Centroamérica.",
+    "fecha": "2026-10-17",
+    "imagen": "",
+    "urlFuente": "#"
+  },
+  {
+    "id": 8,
+    "titulo": "Descubren exoplaneta con condiciones similares a la Tierra",
+    "categoria": "mundo",
+    "origen": "internacional",
+    "resumen": "Astrónomos confirman la detección de un mundo rocoso en zona habitable a 40 años luz de distancia.",
+    "fecha": "2026-10-18",
+    "imagen": "",
+    "urlFuente": "#"
+  }
+]
