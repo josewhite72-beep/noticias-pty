@@ -17,7 +17,7 @@ const CATEGORIAS = {
 // Fuente de datos.
 // Pega aquí la URL de tu Worker de Cloudflare (ej: 'https://noticias-pty-api.TU-USUARIO.workers.dev/noticias').
 // Si está vacía o falla, la app usa las noticias de ejemplo de noticias.json.
-const URL_API = '';
+const URL_API = 'https://noticias-pty-api.josewhite72.workers.dev/noticias';
 const URL_EJEMPLO = 'noticias.json';
 
 const CLAVE_FAVORITOS = 'noticias-pty-favoritos-v2';   // guarda objetos completos

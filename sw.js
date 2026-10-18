@@ -8,7 +8,7 @@
      → las fotos ya vistas se leen sin conexión.
    ============================================ */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE_APP = `noticias-pty-app-${VERSION}`;
 const CACHE_DATOS = `noticias-pty-datos-${VERSION}`;
 const CACHE_IMG = `noticias-pty-img-${VERSION}`;
