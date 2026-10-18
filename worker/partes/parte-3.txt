@@ -1,0 +1,150 @@
+// ---------------------------------------------------------------------
+// DESCARGA
+// ---------------------------------------------------------------------
+async function decodificarRespuesta(resp) {
+  const buffer = await resp.arrayBuffer();
+  const cabecera = new TextDecoder('utf-8').decode(buffer.slice(0, 200));
+  const declarada = (cabecera.match(/encoding=["']([\w-]+)["']/i) || [])[1]
+    || ((resp.headers.get('content-type') || '').match(/charset=([\w-]+)/i) || [])[1]
+    || 'utf-8';
+  try {
+    return new TextDecoder(declarada.toLowerCase()).decode(buffer);
+  } catch {
+    return new TextDecoder('utf-8').decode(buffer);
+  }
+}
+
+async function leerFuente(fuente, ahora) {
+  const inicio = Date.now();
+  try {
+    const resp = await fetch(fuente.url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NoticiasPty/1.0; lector RSS)',
+        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8'
+      },
+      signal: AbortSignal.timeout(MS_TIMEOUT),
+      cf: { cacheTtl: 300 }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const xml = await decodificarRespuesta(resp);
+    const crudos = leerFeed(xml);
+    if (!crudos.length) throw new Error('El feed no trajo noticias (¿no es RSS?)');
+    const items = crudos.map(i => normalizarItem(i, fuente, ahora)).filter(Boolean)
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, MAX_POR_FUENTE);
+    return { estado: { id: fuente.id, nombre: fuente.nombre, ok: true, enFeed: crudos.length, usadas: items.length, ms: Date.now() - inicio }, items };
+  } catch (e) {
+    return { estado: { id: fuente.id, nombre: fuente.nombre, ok: false, error: String(e && e.message || e), ms: Date.now() - inicio }, items: [] };
+  }
+}
+
+async function construir() {
+  const ahora = new Date();
+  const resultados = await Promise.all(FUENTES.filter(f => f.activo).map(f => leerFuente(f, ahora)));
+
+  const vistos = new Set();
+  const noticias = [];
+  for (const n of resultados.flatMap(r => r.items).sort((a, b) => b.fecha.localeCompare(a.fecha))) {
+    const clave = normalizar(n.titulo).replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
+    if (vistos.has(clave) || vistos.has(n.id)) continue;
+    vistos.add(clave);
+    vistos.add(n.id);
+    noticias.push(n);
+    if (noticias.length >= MAX_TOTAL) break;
+  }
+
+  const porCategoria = {};
+  noticias.forEach(n => { porCategoria[n.categoria] = (porCategoria[n.categoria] || 0) + 1; });
+
+  return {
+    noticias,
+    estado: {
+      version: VERSION,
+      generado: ahora.toISOString(),
+      total: noticias.length,
+      porCategoria,
+      fuentes: resultados.map(r => r.estado)
+    }
+  };
+}
+
+// ---------------------------------------------------------------------
+// CACHÉ Y RESPUESTAS
+// ---------------------------------------------------------------------
+const CLAVE = (nombre) => new Request(`https://noticias-pty.cache/${VERSION}/${nombre}`);
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type'
+};
+
+function json(datos, { status = 200, maxAge = 300, extra = {} } = {}) {
+  return new Response(JSON.stringify(datos), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': `public, max-age=${maxAge}`,
+      ...CORS,
+      ...extra
+    }
+  });
+}
+
+function paraCache(datos, segundos) {
+  return new Response(JSON.stringify(datos), {
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': `public, max-age=${segundos}` }
+  });
+}
+
+async function obtener(ctx, forzar) {
+  const cache = caches.default;
+  if (!forzar) {
+    const [n, e] = await Promise.all([cache.match(CLAVE('noticias')), cache.match(CLAVE('estado'))]);
+    if (n && e) return { noticias: await n.json(), estado: await e.json(), desdeCache: true };
+  }
+
+  const { noticias, estado } = await construir();
+
+  if (noticias.length) {
+    ctx.waitUntil(Promise.all([
+      cache.put(CLAVE('noticias'), paraCache(noticias, MINUTOS_CACHE * 60)),
+      cache.put(CLAVE('estado'), paraCache(estado, MINUTOS_CACHE * 60)),
+      cache.put(CLAVE('respaldo'), paraCache(noticias, HORAS_RESPALDO * 3600))
+    ]));
+    return { noticias, estado, desdeCache: false };
+  }
+
+  // Todo falló: usar la última copia buena
+  const respaldo = await cache.match(CLAVE('respaldo'));
+  if (respaldo) return { noticias: await respaldo.json(), estado: { ...estado, usandoRespaldo: true }, desdeCache: true };
+  return { noticias: [], estado, desdeCache: false };
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+    if (request.method !== 'GET') return json({ error: 'Método no permitido' }, { status: 405, maxAge: 0 });
+
+    const url = new URL(request.url);
+    const ruta = url.pathname.replace(/\/+$/, '') || '/';
+    const forzar = url.searchParams.has('refrescar');
+
+    try {
+      if (ruta === '/' || ruta === '/noticias') {
+        const { noticias, estado, desdeCache } = await obtener(ctx, forzar);
+        if (!noticias.length) return json({ error: 'No se pudo leer ninguna fuente', estado }, { status: 502, maxAge: 0 });
+        return json(noticias, { extra: { 'X-Generado': estado.generado, 'X-Desde-Cache': String(desdeCache) } });
+      }
+      if (ruta === '/estado') {
+        const { estado, desdeCache } = await obtener(ctx, forzar);
+        return json({ ...estado, desdeCache }, { maxAge: 0 });
+      }
+      return json({ error: 'Ruta no encontrada', rutas: ['/', '/noticias', '/estado'] }, { status: 404, maxAge: 0 });
+    } catch (e) {
+      return json({ error: 'Error interno', detalle: String(e && e.message || e) }, { status: 500, maxAge: 0 });
+    }
+  }
+};
+
+// ===== FIN DE LA PARTE 3 de 3: código completo =====
