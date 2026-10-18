@@ -22,6 +22,7 @@ const MINUTOS_CACHE = 10;             // cada cuánto se vuelven a leer los feed
 const HORAS_RESPALDO = 48;            // copia de respaldo si todos los feeds fallan
 const MAX_POR_FUENTE = 30;
 const MAX_TOTAL = 160;
+const MAX_INTERNACIONAL = 30;         // para que lo internacional no tape lo nacional
 const DIAS_MAXIMOS = 4;               // descarta noticias más viejas que esto
 const MS_TIMEOUT = 8000;
 const LARGO_RESUMEN = 220;
@@ -41,7 +42,7 @@ const FUENTES = [
   { id: 'p24',      nombre: 'Panamá 24 Horas',  url: 'https://www.panama24horas.com.pa/panama/feed/',       origen: 'nacional', sitio: 'https://www.panama24horas.com.pa', activo: true },
 
   // Por confirmar con /estado después de desplegar
-  { id: 'acp',      nombre: 'Canal de Panamá',  url: 'https://pancanal.com/es/feed/',                       origen: 'nacional', categoria: 'la-ola', sitio: 'https://pancanal.com', activo: true },
+  { id: 'acp',      nombre: 'Canal de Panamá',  url: 'https://pancanal.com/es/feed/',                       origen: 'nacional', categoria: 'la-ola', sitio: 'https://pancanal.com', activo: false }, // 404 el 18-oct-2026
   { id: 'bbc',      nombre: 'BBC Mundo',        url: 'https://feeds.bbci.co.uk/mundo/rss.xml',              origen: 'internacional', sitio: 'https://www.bbc.com',       activo: true },
   { id: 'f24',      nombre: 'France 24',        url: 'https://www.france24.com/es/rss',                     origen: 'internacional', sitio: 'https://www.france24.com',  activo: true }
 ];
@@ -120,6 +121,13 @@ const VECINOS = ['colombia', 'colombiano', 'colombiana', 'venezuela', 'venezolan
   'chileno', 'argentina', 'argentino', 'uruguay', 'uruguayo', 'paraguay', 'paraguayo', 'brasil', 'brasileno',
   'brasilena', 'latinoamerica', 'america latina', 'centroamerica', 'caribe', 'sudamerica', 'panama'];
 
+// Términos inequívocamente panameños: si una nota marcada como internacional
+// los menciona en el título, se trata como nacional (los medios a veces la archivan mal).
+const PANAMA = ['panama', 'panameno', 'panamena', 'panamenos', 'miviot', 'minsa', 'meduca', 'mulino', 'asamblea nacional',
+  'sinaproc', 'idaan', 'attt', 'acp', 'css', 'contraloria', 'chiriqui', 'veraguas', 'herrera', 'los santos', 'cocle',
+  'darien', 'bocas del toro', 'colon', 'chorrera', 'arraijan', 'san miguelito', 'azuero', 'imhpa', 'universidad de panama'];
+const BUSCADOR_PANAMA = crearBuscador(PANAMA);
+
 const PRIORIDAD = ['la-birria', 'tecnologia', 'la-ola', 'la-chacara', 'en-la-calle', 'el-patio'];
 
 function normalizar(texto) {
@@ -153,7 +161,7 @@ function clasificar(item, fuente) {
   let origen = fuente.origen;
 
   const secciones = fuente.categoria ? [] : seccionesDe(item);
-  if (secciones.some(s => s.cat === 'INTERNACIONAL')) origen = 'internacional';
+  if (secciones.some(s => s.cat === 'INTERNACIONAL') && contar(BUSCADOR_PANAMA, titulo) === 0) origen = 'internacional';
 
   if (fuente.categoria) return { categoria: fuente.categoria, origen };
 
@@ -431,9 +439,12 @@ async function construir() {
 
   const vistos = new Set();
   const noticias = [];
+  let internacionales = 0;
   for (const n of resultados.flatMap(r => r.items).sort((a, b) => b.fecha.localeCompare(a.fecha))) {
     const clave = normalizar(n.titulo).replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
     if (vistos.has(clave) || vistos.has(n.id)) continue;
+    if (n.origen === 'internacional' && internacionales >= MAX_INTERNACIONAL) continue;
+    if (n.origen === 'internacional') internacionales++;
     vistos.add(clave);
     vistos.add(n.id);
     noticias.push(n);
