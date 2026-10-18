@@ -208,7 +208,7 @@ function mostrarNoticias(lista) {
                     aria-label="${fav ? 'Quitar de favoritos' : 'Agregar a favoritos'}">${fav ? '★' : '☆'}</button>
           </div>
           <h3>${esc(noticia.titulo)}</h3>
-          <p>${esc(noticia.resumen)}</p>
+          ${noticia.resumen ? `<p>${esc(noticia.resumen)}</p>` : ''}
           <div class="noticia-pie">
             <span class="fecha">${[noticia.fuente, formatearFecha(noticia.fecha)].filter(Boolean).map(esc).join(' · ')}</span>
             ${url

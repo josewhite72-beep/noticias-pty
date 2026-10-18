@@ -81,16 +81,17 @@ body {
   scroll-behavior: smooth;
   scrollbar-width: none;              /* Firefox */
   -webkit-overflow-scrolling: touch;
+  scroll-padding-inline: 48px;        /* el chip activo nunca queda bajo una flecha */
   flex: 1;
 }
 .filtros::-webkit-scrollbar { display: none; }  /* Chrome/Android */
 
-/* Degradado en los bordes: señal visual de "hay más" */
-.filtros.fade-der { -webkit-mask-image: linear-gradient(to right, #000 82%, transparent); mask-image: linear-gradient(to right, #000 82%, transparent); }
-.filtros.fade-izq { -webkit-mask-image: linear-gradient(to left, #000 82%, transparent); mask-image: linear-gradient(to left, #000 82%, transparent); }
+/* Degradado en los bordes: el chip se desvanece ANTES de llegar a la flecha (que mide 32px + 6px de margen) */
+.filtros.fade-der { -webkit-mask-image: linear-gradient(to left, transparent 40px, #000 76px); mask-image: linear-gradient(to left, transparent 40px, #000 76px); }
+.filtros.fade-izq { -webkit-mask-image: linear-gradient(to right, transparent 40px, #000 76px); mask-image: linear-gradient(to right, transparent 40px, #000 76px); }
 .filtros.fade-izq.fade-der {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent 40px, #000 76px, #000 calc(100% - 76px), transparent calc(100% - 40px));
+  mask-image: linear-gradient(to right, transparent 40px, #000 76px, #000 calc(100% - 76px), transparent calc(100% - 40px));
 }
 
 .flecha {

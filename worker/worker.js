@@ -17,7 +17,7 @@
    original. Nunca el texto completo (<content:encoded>).
    ===================================================================== */
 
-const VERSION = '1.0';
+const VERSION = '1.1';
 const MINUTOS_CACHE = 10;             // cada cuánto se vuelven a leer los feeds
 const HORAS_RESPALDO = 48;            // copia de respaldo si todos los feeds fallan
 const MAX_POR_FUENTE = 30;
@@ -91,7 +91,7 @@ const PALABRAS = {
   'tecnologia': ['tecnologia', 'tecnologica', 'tecnologico', 'inteligencia artificial', 'ia', 'ciberseguridad', 'ciberataque',
     'hackeo', 'hackers', 'internet', 'app', 'aplicacion movil', 'redes sociales', 'google', 'apple', 'microsoft',
     'openai', 'tiktok', 'whatsapp', 'smartphone', 'celulares', '5g', 'satelite', 'nasa', 'cohete', 'astronomos',
-    'ciencia', 'cientificos', 'robot', 'robots', 'chip', 'chips', 'startup', 'criptomoneda', 'bitcoin'],
+    'robot', 'robots', 'chip', 'chips', 'startup', 'criptomoneda', 'bitcoin'],
   'la-ola': ['canal de panama', 'acp', 'economia', 'economico', 'economica', 'banco', 'bancos', 'bancaria', 'empleo',
     'desempleo', 'inflacion', 'mef', 'exportaciones', 'importaciones', 'inversion', 'inversiones', 'finanzas', 'impuesto',
     'impuestos', 'dgi', 'pib', 'bolsa de valores', 'comercio', 'zona libre', 'puerto', 'puertos', 'buques', 'transitos',
@@ -368,7 +368,11 @@ function hashId(texto) {
   return (h >>> 0).toString(36);
 }
 
-function normalizarItem(item, fuente, ahora) {
+// Extractos que no describen la nota: promos de transmisión que algunos medios
+// (p. ej. TVN/TVMAX) pegan igual en varias notas distintas.
+const PROMO = /^(sintoniza|mira|sigue|disfruta|no te pierdas|vive)\b.{0,200}\b(en vivo|youtube|transmisi[oó]n|por el canal|por tvmax|por tvn)/i;
+
+function normalizarItem(item, fuente, ahora, repetidos) {
   const urlFuente = limpiarEnlace(item.link, fuente);
   if (!item.titulo || !urlFuente) return null;
 
@@ -378,6 +382,7 @@ function normalizarItem(item, fuente, ahora) {
 
   let resumen = item.resumen;
   if (normalizar(resumen) === normalizar(item.titulo)) resumen = '';
+  if (PROMO.test(resumen) || repetidos.has(normalizar(resumen))) resumen = '';
   const { categoria, origen } = clasificar(item, fuente);
 
   return {
@@ -424,7 +429,11 @@ async function leerFuente(fuente, ahora) {
     const xml = await decodificarRespuesta(resp);
     const crudos = leerFeed(xml);
     if (!crudos.length) throw new Error('El feed no trajo noticias (¿no es RSS?)');
-    const items = crudos.map(i => normalizarItem(i, fuente, ahora)).filter(Boolean)
+    // Un mismo extracto en dos o más notas distintas es plantilla, no resumen
+    const veces = {};
+    crudos.forEach(i => { const r = normalizar(i.resumen); if (r) veces[r] = (veces[r] || 0) + 1; });
+    const repetidos = new Set(Object.keys(veces).filter(r => veces[r] > 1));
+    const items = crudos.map(i => normalizarItem(i, fuente, ahora, repetidos)).filter(Boolean)
       .sort((a, b) => b.fecha.localeCompare(a.fecha))
       .slice(0, MAX_POR_FUENTE);
     return { estado: { id: fuente.id, nombre: fuente.nombre, ok: true, enFeed: crudos.length, usadas: items.length, ms: Date.now() - inicio }, items };
