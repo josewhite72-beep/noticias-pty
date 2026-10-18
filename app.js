@@ -14,8 +14,11 @@ const CATEGORIAS = {
   'tecnologia':   'Tecnología'
 };
 
-// Fuente de datos. En la Fase 2 se cambia por la URL del Worker de RSS.
-const URL_NOTICIAS = 'noticias.json';
+// Fuente de datos.
+// Pega aquí la URL de tu Worker de Cloudflare (ej: 'https://noticias-pty-api.TU-USUARIO.workers.dev/noticias').
+// Si está vacía o falla, la app usa las noticias de ejemplo de noticias.json.
+const URL_API = '';
+const URL_EJEMPLO = 'noticias.json';
 
 const CLAVE_FAVORITOS = 'noticias-pty-favoritos-v2';   // guarda objetos completos
 const CLAVE_FAVORITOS_V1 = 'noticias-pty-favoritos';   // versión anterior (solo IDs)
@@ -27,6 +30,9 @@ const flechaIzq = document.getElementById('flecha-izq');
 const flechaDer = document.getElementById('flecha-der');
 const fechaHoy = document.getElementById('fecha-hoy');
 const avisoOffline = document.getElementById('aviso-offline');
+const avisoEjemplo = document.getElementById('aviso-ejemplo');
+const btnRefrescar = document.getElementById('btn-refrescar');
+const btnLimpiarCache = document.getElementById('btn-limpiar-cache');
 
 // 3. ESTADO GLOBAL
 let noticiasActuales = [];
@@ -46,21 +52,34 @@ function esc(texto) {
     .replace(/'/g, '&#39;');
 }
 
-// Solo acepta enlaces http(s); bloquea "javascript:", "data:", etc.
+// Solo acepta enlaces absolutos http(s); bloquea "javascript:", "data:", "#", etc.
 function urlSegura(url) {
   try {
-    const u = new URL(url, location.href);
+    const u = new URL(String(url || ''));
     return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '';
   } catch {
     return '';
   }
 }
 
+// Acepta "2026-10-18" o "2026-10-18T10:52:43Z". Muestra tiempo relativo si es reciente.
 function formatearFecha(iso) {
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const [y, m, d] = String(iso || '').split('-');
-  if (!y || !m || !d) return '';
-  return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${y}`;
+  const texto = String(iso || '');
+  const soloDia = /^\d{4}-\d{2}-\d{2}$/.test(texto);
+  const fecha = new Date(soloDia ? `${texto}T12:00:00` : texto);
+  if (isNaN(fecha)) return '';
+
+  if (!soloDia) {
+    const minutos = Math.round((Date.now() - fecha) / 60000);
+    if (minutos < 1) return 'ahora';
+    if (minutos < 60) return `hace ${minutos} min`;
+    const horas = Math.round(minutos / 60);
+    if (horas < 24) return `hace ${horas} h`;
+    if (horas < 48) return 'ayer';
+  }
+  const anio = fecha.getFullYear() !== new Date().getFullYear() ? ` ${fecha.getFullYear()}` : '';
+  return `${fecha.getDate()} ${meses[fecha.getMonth()]}${anio}`;
 }
 
 function mostrarFechaHoy() {
@@ -191,7 +210,7 @@ function mostrarNoticias(lista) {
           <h3>${esc(noticia.titulo)}</h3>
           <p>${esc(noticia.resumen)}</p>
           <div class="noticia-pie">
-            <span class="fecha">${esc(formatearFecha(noticia.fecha))}</span>
+            <span class="fecha">${[noticia.fuente, formatearFecha(noticia.fecha)].filter(Boolean).map(esc).join(' · ')}</span>
             ${url
               ? `<a class="btn-leer" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Leer más</a>`
               : `<span class="btn-leer deshabilitado" aria-disabled="true">Leer más</span>`}
@@ -224,23 +243,61 @@ contenedorNoticias.addEventListener('click', (e) => {
 });
 
 // 8. CARGA DE DATOS
-async function cargarNoticias() {
-  mostrarSkeleton();
+async function pedirLista(url) {
+  const respuesta = await fetch(url, { cache: 'no-cache' });
+  if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+  const datos = await respuesta.json();
+  if (!Array.isArray(datos) || !datos.length) throw new Error('Respuesta vacía o con formato inválido');
+  return datos;
+}
+
+let cargando = false;
+async function cargarNoticias({ silencioso = false } = {}) {
+  if (cargando) return;
+  cargando = true;
+  if (!silencioso || !noticiasActuales.length) mostrarSkeleton();
+  btnRefrescar?.classList.add('girando');
+
+  let datos = null;
+  let deEjemplo = false;
   try {
-    const respuesta = await fetch(URL_NOTICIAS, { cache: 'no-cache' });
-    if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
-    const datos = await respuesta.json();
-    if (!Array.isArray(datos)) throw new Error('Formato inválido: se esperaba una lista');
+    if (URL_API) {
+      try {
+        datos = await pedirLista(URL_API);
+      } catch (e) {
+        console.warn('No se pudo leer el Worker; uso las noticias de ejemplo.', e);
+      }
+    }
+    if (!datos) {
+      datos = await pedirLista(URL_EJEMPLO);
+      deEjemplo = true;
+    }
     noticiasActuales = datos;
+    avisoEjemplo.hidden = !deEjemplo;
     migrarFavoritosV1();
     aplicarFiltro(categoriaActiva);
   } catch (error) {
     console.error('Error al cargar noticias:', error);
     // Sin noticias, pero con favoritos guardados: la vista Favoritos sigue funcionando
     if (categoriaActiva === 'favoritos') aplicarFiltro('favoritos');
-    else mostrarError();
+    else if (!noticiasActuales.length) mostrarError();
+  } finally {
+    cargando = false;
+    btnRefrescar?.classList.remove('girando');
   }
 }
+
+btnRefrescar?.addEventListener('click', () => cargarNoticias());
+
+// Al volver a la app después de un rato, traer lo nuevo sin borrar la pantalla
+let ultimaVisita = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    ultimaVisita = Date.now();
+  } else if (Date.now() - ultimaVisita > 10 * 60 * 1000) {
+    cargarNoticias({ silencioso: true });
+  }
+});
 
 // 9. FILTROS
 function aplicarFiltro(categoria) {
@@ -294,11 +351,28 @@ function actualizarAvisoOffline() {
 }
 window.addEventListener('online', () => {
   actualizarAvisoOffline();
-  cargarNoticias(); // al volver la señal, traer lo más nuevo
+  cargarNoticias({ silencioso: true }); // al volver la señal, traer lo más nuevo
 });
 window.addEventListener('offline', actualizarAvisoOffline);
 
-// 12. SERVICE WORKER
+// 12. LIMPIAR CACHÉ (fuerza la última versión de la app; no borra favoritos)
+btnLimpiarCache?.addEventListener('click', async () => {
+  if (!confirm('¿Actualizar la app? Se borrará la caché y se recargará. Tus favoritos se conservan.')) return;
+  try {
+    if ('caches' in window) {
+      const nombres = await caches.keys();
+      await Promise.all(nombres.map(n => caches.delete(n)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } finally {
+    location.reload();
+  }
+});
+
+// 13. SERVICE WORKER
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
@@ -307,7 +381,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 13. INICIO
+// 14. INICIO
 document.addEventListener('DOMContentLoaded', () => {
   mostrarFechaHoy();
   actualizarFlechas();

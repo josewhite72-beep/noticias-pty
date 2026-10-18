@@ -378,3 +378,58 @@ body {
   font-size: 0.8rem;
   color: var(--color-texto-suave);
 }
+/* ============================================
+   HEADER: botón de actualizar
+   ============================================ */
+.header-derecha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-refrescar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-refrescar.girando { animation: girar 0.8s linear infinite; pointer-events: none; }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* ============================================
+   AVISO DE NOTICIAS DE EJEMPLO
+   ============================================ */
+.aviso-ejemplo {
+  background: #E3F2FD;
+  color: #0D47A1;
+  text-align: center;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+}
+.aviso-ejemplo[hidden] { display: none; }
+
+/* ============================================
+   PIE: marca y botón de actualizar app
+   ============================================ */
+.app-footer p + p { margin-top: 4px; }
+.footer-marca { font-weight: 600; }
+.footer-nota { font-size: 0.72rem; opacity: 0.8; }
+
+.btn-limpiar-cache {
+  margin-top: 14px;
+  background: transparent;
+  color: var(--color-texto-suave);
+  border: 1px solid var(--color-borde);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}

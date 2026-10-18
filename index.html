@@ -25,7 +25,10 @@
   <header class="app-header">
     <div class="header-top">
       <h1 class="logo">Noticias<span class="logo-pty">_pty</span></h1>
-      <span class="fecha-hoy" id="fecha-hoy"></span>
+      <div class="header-derecha">
+        <span class="fecha-hoy" id="fecha-hoy"></span>
+        <button class="btn-refrescar" id="btn-refrescar" aria-label="Actualizar noticias" title="Actualizar noticias">↻</button>
+      </div>
     </div>
 
     <!-- FILTROS: una sola fila deslizable con flechas indicadoras -->
@@ -49,6 +52,8 @@
 
   <!-- Aviso de modo sin conexión -->
   <div class="aviso-offline" id="aviso-offline" hidden>Sin conexión · mostrando noticias guardadas</div>
+  <!-- Aviso cuando se muestran las noticias de ejemplo -->
+  <div class="aviso-ejemplo" id="aviso-ejemplo" hidden>Noticias de ejemplo · conecta el Worker para ver noticias reales</div>
 
   <!-- CONTENIDO PRINCIPAL -->
   <main class="contenedor-principal">
@@ -59,6 +64,9 @@
 
   <footer class="app-footer">
     <p>Noticias_pty · Hecho en Panamá 🇵🇦</p>
+    <p class="footer-marca">Un proyecto de PanaMentorLabs</p>
+    <p class="footer-nota">Titulares y extractos de cada medio, con enlace a la nota original.</p>
+    <button class="btn-limpiar-cache" id="btn-limpiar-cache">Actualizar app</button>
   </footer>
 
   <script src="app.js"></script>
