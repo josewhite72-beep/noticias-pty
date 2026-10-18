@@ -17,7 +17,7 @@
    original. Nunca el texto completo (<content:encoded>).
    ===================================================================== */
 
-const VERSION = '1.1';
+const VERSION = '1.2';
 const MINUTOS_CACHE = 10;             // cada cuánto se vuelven a leer los feeds
 const HORAS_RESPALDO = 48;            // copia de respaldo si todos los feeds fallan
 const MAX_POR_FUENTE = 30;
@@ -93,7 +93,7 @@ const PALABRAS = {
     'openai', 'tiktok', 'whatsapp', 'smartphone', 'celulares', '5g', 'satelite', 'nasa', 'cohete', 'astronomos',
     'robot', 'robots', 'chip', 'chips', 'startup', 'criptomoneda', 'bitcoin'],
   'la-ola': ['canal de panama', 'acp', 'economia', 'economico', 'economica', 'banco', 'bancos', 'bancaria', 'empleo',
-    'desempleo', 'inflacion', 'mef', 'exportaciones', 'importaciones', 'inversion', 'inversiones', 'finanzas', 'impuesto',
+    'desempleo', 'inflacion', 'mef', 'exportaciones', 'importaciones', 'inversion extranjera', 'inversion privada', 'inversionistas', 'finanzas', 'impuesto',
     'impuestos', 'dgi', 'pib', 'bolsa de valores', 'comercio', 'zona libre', 'puerto', 'puertos', 'buques', 'transitos',
     'aranceles', 'presupuesto', 'deuda publica', 'combustible', 'gasolina', 'precios', 'acodeco', 'salario minimo'],
   'la-chacara': ['festival', 'concierto', 'carnaval', 'carnavales', 'folclor', 'folclore', 'folclorico', 'cultura',
@@ -127,6 +127,16 @@ const PANAMA = ['panama', 'panameno', 'panamena', 'panamenos', 'miviot', 'minsa'
   'sinaproc', 'idaan', 'attt', 'acp', 'css', 'contraloria', 'chiriqui', 'veraguas', 'herrera', 'los santos', 'cocle',
   'darien', 'bocas del toro', 'colon', 'chorrera', 'arraijan', 'san miguelito', 'azuero', 'imhpa', 'universidad de panama'];
 const BUSCADOR_PANAMA = crearBuscador(PANAMA);
+
+// Provincias y gentilicios: si aparecen en el TÍTULO, una nota "económica" débil
+// (una sola palabra de La Ola) se va a En la calle — es noticia de la región.
+const PROVINCIAS = ['chiriqui', 'chiricano', 'chiricana', 'chiricanos', 'veraguas', 'veraguense', 'veraguenses',
+  'herrera', 'herrerano', 'herrerana', 'los santos', 'santeno', 'santena', 'santenos', 'cocle', 'coclesano', 'coclesana',
+  'colon', 'colonense', 'colonenses', 'darien', 'darienita', 'bocas del toro', 'bocatoreno', 'bocatorena', 'chorrera',
+  'chorrerano', 'arraijan', 'san miguelito', 'azuero', 'panama oeste', 'panama este', 'comarca', 'ngabe bugle',
+  'guna yala', 'embera'];
+const BUSCADOR_PROVINCIAS = crearBuscador(PROVINCIAS);
+const MAX_OLA_DEBIL = 2;   // puntos de La Ola que todavía cuentan como "débil"
 
 const PRIORIDAD = ['la-birria', 'tecnologia', 'la-ola', 'la-chacara', 'en-la-calle', 'el-patio'];
 
@@ -186,6 +196,9 @@ function clasificar(item, fuente) {
   let mejor = null;
   for (const cat of PRIORIDAD) {
     if (puntos[cat] > 0 && (mejor === null || puntos[cat] > puntos[mejor])) mejor = cat;
+  }
+  if (mejor === 'la-ola' && puntos['la-ola'] <= MAX_OLA_DEBIL && contar(BUSCADOR_PROVINCIAS, titulo) > 0) {
+    mejor = 'en-la-calle';
   }
   return { categoria: mejor || 'el-patio', origen };
 }
