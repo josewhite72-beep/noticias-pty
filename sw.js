@@ -2,13 +2,13 @@
    SERVICE WORKER — Noticias_pty
    - App (HTML/CSS/JS/íconos): stale-while-revalidate
      → carga instantánea desde caché y se actualiza sola en segundo plano.
-   - Noticias (Worker o JSON de ejemplo): network-first
+   - Noticias (/api/noticias o JSON de ejemplo): network-first
      → siempre lo más nuevo; si no hay señal, lo último guardado.
    - Imágenes: cache-first con límite de entradas
      → las fotos ya vistas se leen sin conexión.
    ============================================ */
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE_APP = `noticias-pty-app-${VERSION}`;
 const CACHE_DATOS = `noticias-pty-datos-${VERSION}`;
 const CACHE_IMG = `noticias-pty-img-${VERSION}`;
@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
   // Búsquedas: siempre a la red (cada texto es distinto; no se guardan)
   if (url.pathname.endsWith('/buscar')) return;
 
-  // Noticias: peticiones fetch() de la app (Worker o noticias.json de ejemplo)
+  // Noticias: peticiones fetch() de la app (/api/noticias o noticias.json de ejemplo)
   if (req.destination === '' && !url.pathname.endsWith('manifest.json')) {
     event.respondWith(redPrimero(req, CACHE_DATOS));
     return;

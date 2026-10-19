@@ -14,13 +14,12 @@ const CATEGORIAS = {
   'tecnologia':   'Tecnología'
 };
 
-// Fuente de datos.
-// Pega aquí la URL de tu Worker de Cloudflare (ej: 'https://noticias-pty-api.TU-USUARIO.workers.dev/noticias').
-// Si está vacía o falla, la app usa las noticias de ejemplo de noticias.json.
-const URL_API = 'https://noticias-pty-api.josewhite72.workers.dev/noticias';
+// Fuente de datos: funciones de Vercel en /api (mismo dominio que la app).
+// Si fallan, la app usa las noticias de ejemplo de noticias.json.
+const URL_API = '/api/noticias';
 const URL_EJEMPLO = 'noticias.json';
-// Búsqueda en los medios: misma base del Worker, ruta /buscar
-const URL_BUSCAR = URL_API ? URL_API.replace(/\/noticias\/?$/, '').replace(/\/+$/, '') + '/buscar' : '';
+// Búsqueda en los medios (función de Vercel)
+const URL_BUSCAR = '/api/buscar';
 
 const CLAVE_FAVORITOS = 'noticias-pty-favoritos-v2';   // guarda objetos completos
 const CLAVE_FAVORITOS_V1 = 'noticias-pty-favoritos';   // versión anterior (solo IDs)
@@ -315,7 +314,7 @@ async function cargarNoticias({ silencioso = false } = {}) {
       try {
         datos = await pedirLista(URL_API);
       } catch (e) {
-        console.warn('No se pudo leer el Worker; uso las noticias de ejemplo.', e);
+        console.warn('No se pudo leer /api/noticias; uso las noticias de ejemplo.', e);
       }
     }
     if (!datos) {
@@ -402,7 +401,7 @@ window.addEventListener('resize', actualizarFlechas);
 
 // 10b. BUSCADOR
 // Nivel 1: filtra al instante las noticias que ya están en la app (y los favoritos).
-// Nivel 2: al pulsar Buscar (Enter) consulta al Worker (/buscar), que busca en los
+// Nivel 2: al pulsar Buscar (Enter) consulta /api/buscar, que busca en los
 //          medios vía Google News y devuelve los resultados ya clasificados.
 const busqueda = {
   texto: '',
@@ -511,7 +510,7 @@ async function buscarEnMedios() {
     if (control !== busqueda.control) return;
     busqueda.estado = 'error';
     busqueda.error = e.sinRuta
-      ? 'El Worker de Cloudflare todavía no tiene la búsqueda (versión 1.3). Despliega la versión nueva de worker.js.'
+      ? 'La búsqueda todavía no está publicada en Vercel. Espera a que termine el despliegue e intenta de nuevo.'
       : 'No se pudo buscar en los medios. Intenta de nuevo en un momento.';
   }
   if (categoriaActiva === 'busqueda') mostrarBusqueda();

@@ -1,5 +1,0 @@
-# Configuración para que Cloudflare despliegue el Worker desde GitHub.
-# En Cloudflare: carpeta raíz (root directory) = worker
-name = "noticias-pty-api"
-main = "worker.js"
-compatibility_date = "2026-10-01"

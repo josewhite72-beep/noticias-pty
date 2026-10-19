@@ -1,0 +1,6 @@
+{
+  "name": "noticias-pty",
+  "private": true,
+  "type": "module",
+  "description": "Noticias_pty — PWA de noticias de Panamá con funciones de Vercel en /api"
+}
