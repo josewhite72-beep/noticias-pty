@@ -491,6 +491,11 @@ async function buscarEnMedios() {
 
   try {
     const resp = await fetch(`${URL_BUSCAR}?q=${encodeURIComponent(texto)}`, { signal: control.signal });
+    if (resp.status === 404) {
+      const err = new Error('Ruta /buscar no existe');
+      err.sinRuta = true;
+      throw err;
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const datos = await resp.json();
     if (control !== busqueda.control || texto !== busqueda.texto) return;   // el usuario ya cambió el texto
@@ -505,7 +510,9 @@ async function buscarEnMedios() {
     console.warn('Búsqueda en los medios falló:', e);
     if (control !== busqueda.control) return;
     busqueda.estado = 'error';
-    busqueda.error = 'No se pudo buscar en los medios. Intenta de nuevo en un momento.';
+    busqueda.error = e.sinRuta
+      ? 'El Worker de Cloudflare todavía no tiene la búsqueda (versión 1.3). Despliega la versión nueva de worker.js.'
+      : 'No se pudo buscar en los medios. Intenta de nuevo en un momento.';
   }
   if (categoriaActiva === 'busqueda') mostrarBusqueda();
 }
