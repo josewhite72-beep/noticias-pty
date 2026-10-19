@@ -20,6 +20,7 @@ Lee los RSS de los medios, los clasifica en las 8 categorías de la app y entreg
 | `/noticias` (o `/`) | Lista de noticias para la app |
 | `/estado` | Fuentes que funcionaron, cuántas noticias trajo cada una y el conteo por categoría |
 | `?refrescar=1` | Ignora la caché y vuelve a leer los feeds |
+| `/buscar?q=texto` | Busca en Google News (Panamá, español) y devuelve hasta 20 resultados ya clasificados. Si Google falla, busca en Panamá 24 Horas. Caché de 10 min por búsqueda. |
 
 ## Agregar o quitar medios
 

@@ -8,7 +8,7 @@
      → las fotos ya vistas se leen sin conexión.
    ============================================ */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE_APP = `noticias-pty-app-${VERSION}`;
 const CACHE_DATOS = `noticias-pty-datos-${VERSION}`;
 const CACHE_IMG = `noticias-pty-img-${VERSION}`;
@@ -60,6 +60,9 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+
+  // Búsquedas: siempre a la red (cada texto es distinto; no se guardan)
+  if (url.pathname.endsWith('/buscar')) return;
 
   // Noticias: peticiones fetch() de la app (Worker o noticias.json de ejemplo)
   if (req.destination === '' && !url.pathname.endsWith('manifest.json')) {

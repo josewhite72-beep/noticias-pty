@@ -10,6 +10,7 @@
      /            → lista de noticias (JSON) — la que usa la app
      /noticias    → igual que /
      /estado      → qué fuentes funcionaron, cuántas noticias trajo cada una
+     /buscar?q=…  → busca en Google News (Panamá, español) y clasifica los resultados
      ?refrescar=1 → ignora la caché y vuelve a leer los feeds
 
    Derechos de autor: solo se usa el titular, el extracto corto que el
@@ -17,7 +18,7 @@
    original. Nunca el texto completo (<content:encoded>).
    ===================================================================== */
 
-const VERSION = '1.2';
+const VERSION = '1.3';
 const MINUTOS_CACHE = 10;             // cada cuánto se vuelven a leer los feeds
 const HORAS_RESPALDO = 48;            // copia de respaldo si todos los feeds fallan
 const MAX_POR_FUENTE = 30;
@@ -200,6 +201,7 @@ function clasificar(item, fuente) {
   if (mejor === 'la-ola' && puntos['la-ola'] <= MAX_OLA_DEBIL && contar(BUSCADOR_PROVINCIAS, titulo) > 0) {
     mejor = 'en-la-calle';
   }
+  if (!mejor && contar(BUSCADOR_PROVINCIAS, titulo) > 0) mejor = 'en-la-calle';
   return { categoria: mejor || 'el-patio', origen };
 }
 
@@ -489,6 +491,125 @@ async function construir() {
 }
 
 // ---------------------------------------------------------------------
+// BÚSQUEDA (/buscar?q=…)
+// Fuente principal: RSS de búsqueda de Google News (Panamá, español).
+// Respaldo: búsqueda RSS de Panamá 24 Horas (WordPress) si Google falla.
+// Google News no trae imágenes ni extracto: la app muestra la franja de color.
+// ---------------------------------------------------------------------
+const MAX_BUSQUEDA = 20;
+const MINUTOS_CACHE_BUSQUEDA = 10;
+const MEDIOS_PANAMENOS = ['prensa.com', 'tvn-2.com', 'telemetro.com', 'panamaamerica.com.pa', 'critica.com.pa',
+  'laestrella.com.pa', 'ensegundos.com.pa', 'eco.tv', 'metrolibre.com', 'midiario.com', 'elsiglo.com.pa',
+  'panama24horas.com.pa', 'nexpanama.com', 'radiopanama.com.pa', 'foco.pa', 'tvmax-9.com', 'pancanal.com',
+  'gob.pa', 'up.ac.pa'];
+
+function dominio(u) {
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+function esMedioPanameno(u) {
+  const d = dominio(u);
+  return !!d && (d.endsWith('.pa') || MEDIOS_PANAMENOS.some(m => d === m || d.endsWith('.' + m)));
+}
+
+// Google News: <title>Titular - Medio</title> … <source url="https://medio.com">Medio</source>
+function leerGoogleNews(xml) {
+  const bloques = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
+  return bloques.map(b => {
+    const apertura = aperturas(b, 'source')[0] || '';
+    const medio = textoPlano(etiqueta(b, 'source'));
+    let titulo = textoPlano(etiqueta(b, 'title'));
+    if (medio && titulo.endsWith(` - ${medio}`)) titulo = titulo.slice(0, -(medio.length + 3)).trim();
+    return {
+      titulo,
+      link: textoPlano(etiqueta(b, 'link')),
+      resumen: '',
+      fechaCruda: textoPlano(etiqueta(b, 'pubDate')),
+      imagen: '',
+      categorias: [],
+      medio: medio || 'Google News',
+      sitioMedio: atributo(apertura, 'url')
+    };
+  });
+}
+
+function itemDeBusqueda(item, ahora) {
+  const link = urlHttp(item.link);
+  if (!item.titulo || !link) return null;
+  const fecha = leerFecha(item.fechaCruda) || ahora;
+  const nacional = esMedioPanameno(item.sitioMedio || item.link) || contar(BUSCADOR_PANAMA, normalizar(item.titulo)) > 0;
+  const { categoria, origen } = clasificar(item, { origen: nacional ? 'nacional' : 'internacional' });
+  return {
+    id: hashId(link.href),
+    titulo: item.titulo,
+    categoria,
+    origen,
+    resumen: item.resumen ? recortar(item.resumen, LARGO_RESUMEN) : '',
+    fecha: fecha.toISOString(),
+    imagen: item.imagen ? (arreglarImagen(item.imagen, { sitio: item.sitioMedio || link.origin }) || '') : '',
+    urlFuente: link.href,
+    fuente: item.medio,
+    externa: true
+  };
+}
+
+async function descargarTexto(url) {
+  const resp = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; NoticiasPty/1.0; lector RSS)',
+      'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
+      'Accept-Language': 'es-PA,es;q=0.9'
+    },
+    signal: AbortSignal.timeout(MS_TIMEOUT)
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return decodificarRespuesta(resp);
+}
+
+async function buscar(q) {
+  const ahora = new Date();
+  const consulta = encodeURIComponent(q);
+  let crudos = [];
+  let motor = 'google-news';
+  try {
+    const xml = await descargarTexto(`https://news.google.com/rss/search?q=${consulta}&hl=es-419&gl=PA&ceid=PA:es-419`);
+    crudos = leerGoogleNews(xml);
+  } catch (e) {
+    crudos = [];
+  }
+  if (!crudos.length) {
+    motor = 'panama24horas';
+    try {
+      const xml = await descargarTexto(`https://www.panama24horas.com.pa/panama/?s=${consulta}&feed=rss2`);
+      crudos = leerFeed(xml).map(i => ({ ...i, medio: 'Panamá 24 Horas', sitioMedio: 'https://www.panama24horas.com.pa' }));
+    } catch (e) {
+      motor = 'ninguno';
+    }
+  }
+
+  const vistos = new Set();
+  const resultados = [];
+  for (const n of crudos.map(i => itemDeBusqueda(i, ahora)).filter(Boolean)) {
+    const clave = normalizar(n.titulo).replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 70);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    resultados.push(n);
+  }
+  resultados.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return { q, motor, total: Math.min(resultados.length, MAX_BUSQUEDA), resultados: resultados.slice(0, MAX_BUSQUEDA) };
+}
+
+async function buscarConCache(q, ctx) {
+  const cache = caches.default;
+  const clave = new Request(`https://noticias-pty.cache/${VERSION}/buscar/${encodeURIComponent(normalizar(q))}`);
+  const guardada = await cache.match(clave);
+  if (guardada) return guardada.json();
+  const datos = await buscar(q);
+  if (datos.resultados.length) ctx.waitUntil(cache.put(clave, paraCache(datos, MINUTOS_CACHE_BUSQUEDA * 60)));
+  return datos;
+}
+
+// ---------------------------------------------------------------------
 // CACHÉ Y RESPUESTAS
 // ---------------------------------------------------------------------
 const CLAVE = (nombre) => new Request(`https://noticias-pty.cache/${VERSION}/${nombre}`);
@@ -560,7 +681,13 @@ export default {
         const { estado, desdeCache } = await obtener(ctx, forzar);
         return json({ ...estado, desdeCache }, { maxAge: 0 });
       }
-      return json({ error: 'Ruta no encontrada', rutas: ['/', '/noticias', '/estado'] }, { status: 404, maxAge: 0 });
+      if (ruta === '/buscar') {
+        const q = (url.searchParams.get('q') || '').replace(/\s+/g, ' ').trim();
+        if (q.length < 2 || q.length > 120) return json({ error: 'Escribe entre 2 y 120 caracteres' }, { status: 400, maxAge: 0 });
+        const datos = await buscarConCache(q, ctx);
+        return json(datos, { maxAge: MINUTOS_CACHE_BUSQUEDA * 60 });
+      }
+      return json({ error: 'Ruta no encontrada', rutas: ['/', '/noticias', '/estado', '/buscar?q='] }, { status: 404, maxAge: 0 });
     } catch (e) {
       return json({ error: 'Error interno', detalle: String(e && e.message || e) }, { status: 500, maxAge: 0 });
     }

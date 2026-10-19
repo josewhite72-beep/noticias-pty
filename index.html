@@ -27,9 +27,17 @@
       <h1 class="logo">Noticias<span class="logo-pty">_pty</span></h1>
       <div class="header-derecha">
         <span class="fecha-hoy" id="fecha-hoy"></span>
+        <button class="btn-refrescar" id="btn-buscar" aria-label="Buscar noticias" title="Buscar noticias" aria-expanded="false" aria-controls="barra-busqueda"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
         <button class="btn-refrescar" id="btn-refrescar" aria-label="Actualizar noticias" title="Actualizar noticias">↻</button>
       </div>
     </div>
+
+    <!-- BUSCADOR: se despliega con la lupa -->
+    <form class="barra-busqueda" id="barra-busqueda" role="search" hidden>
+      <input type="search" id="campo-busqueda" placeholder="Buscar noticia o tema…" enterkeyhint="search"
+             autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Buscar noticia o tema">
+      <button type="button" class="btn-cerrar-busqueda" id="btn-cerrar-busqueda" aria-label="Cerrar búsqueda">✕</button>
+    </form>
 
     <!-- FILTROS: una sola fila deslizable con flechas indicadoras -->
     <div class="filtros-wrap">
