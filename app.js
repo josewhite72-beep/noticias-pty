@@ -20,6 +20,9 @@ const URL_API = '/api/noticias';
 const URL_EJEMPLO = 'noticias.json';
 // Búsqueda en los medios (función de Vercel)
 const URL_BUSCAR = '/api/buscar';
+// Vistazo Geopolítico del día (función de Vercel con Groq)
+const URL_VISTAZO = '/api/vistazo';
+const CLAVE_VISTAZO = 'noticias-pty-vistazo';
 
 const CLAVE_FAVORITOS = 'noticias-pty-favoritos-v2';   // guarda objetos completos
 const CLAVE_FAVORITOS_V1 = 'noticias-pty-favoritos';   // versión anterior (solo IDs)
@@ -38,6 +41,10 @@ const btnBuscar = document.getElementById('btn-buscar');
 const barraBusqueda = document.getElementById('barra-busqueda');
 const campoBusqueda = document.getElementById('campo-busqueda');
 const btnCerrarBusqueda = document.getElementById('btn-cerrar-busqueda');
+const panelVistazo = document.getElementById('panel-vistazo');
+const vistazoCuerpo = document.getElementById('vistazo-cuerpo');
+const vistazoFecha = document.getElementById('vistazo-fecha');
+const btnCerrarVistazo = document.getElementById('btn-cerrar-vistazo');
 
 // 3. ESTADO GLOBAL
 let noticiasActuales = [];
@@ -249,15 +256,31 @@ function htmlTarjeta(noticia) {
     </article>`;
 }
 
+// Botón del Vistazo: arriba de "Todas" y de "Geopolítica"
+function htmlBotonVistazo() {
+  if (!URL_VISTAZO || (categoriaActiva !== 'todas' && categoriaActiva !== 'geopolitica')) return '';
+  return `
+    <button class="btn-vistazo" data-accion="vistazo">
+      <span class="btn-vistazo-icono" aria-hidden="true">🌐</span>
+      <span class="btn-vistazo-texto">
+        <strong>Vistazo Geopolítico Hoy</strong>
+        <span>Las 5 claves del día, resumidas</span>
+      </span>
+      <span class="btn-vistazo-flecha" aria-hidden="true">›</span>
+    </button>`;
+}
+
 function mostrarNoticias(lista) {
   if (lista.length === 0) {
     const mensaje = categoriaActiva === 'favoritos'
       ? 'Aún no tienes favoritos. Toca la ☆ de una noticia para guardarla y leerla luego, incluso sin conexión.'
-      : 'No hay noticias en esta sección por hoy.';
-    contenedorNoticias.innerHTML = `<p class="sin-noticias">${mensaje}</p>`;
+      : categoriaActiva === 'geopolitica'
+        ? 'Todavía no hay noticias de geopolítica hoy.'
+        : 'No hay noticias en esta sección por hoy.';
+    contenedorNoticias.innerHTML = htmlBotonVistazo() + `<p class="sin-noticias">${mensaje}</p>`;
     return;
   }
-  contenedorNoticias.innerHTML = lista.map(htmlTarjeta).join('');
+  contenedorNoticias.innerHTML = htmlBotonVistazo() + lista.map(htmlTarjeta).join('');
 }
 
 // Si una imagen falla, se reemplaza por el bloque de categoría
@@ -284,6 +307,10 @@ contenedorNoticias.addEventListener('click', (e) => {
   }
   if (e.target.closest('[data-accion="buscar-medios"]')) {
     buscarEnMedios();
+    return;
+  }
+  if (e.target.closest('[data-accion="vistazo"]')) {
+    abrirVistazo();
     return;
   }
   if (e.target.closest('[data-accion="reintentar"]')) {
@@ -358,6 +385,8 @@ function aplicarFiltro(categoria) {
   }
   if (categoria === 'todas') {
     lista = noticiasActuales;
+  } else if (categoria === 'geopolitica') {
+    lista = noticiasActuales.filter(n => n.geo);
   } else if (categoria === 'favoritos') {
     // Más recientes primero
     lista = Object.values(favoritos).sort((a, b) =>
@@ -613,6 +642,179 @@ campoBusqueda.addEventListener('keydown', (e) => {
 });
 btnBuscar.addEventListener('click', () => (barraBusqueda.hidden ? abrirBusqueda() : cerrarBusqueda()));
 btnCerrarBusqueda.addEventListener('click', () => cerrarBusqueda());
+
+// 10c. VISTAZO GEOPOLÍTICO HOY
+// Resumen de 5 puntos que la IA (Groq) arma una vez al día con los titulares de
+// geopolítica. Cada punto enlaza a las noticias en que se basa. Se guarda el
+// último en el teléfono para leerlo sin conexión.
+
+// Día de la edición: cambia a las 5:00 a. m. de Panamá (10:00 UTC), igual que el servidor
+function diaEdicion(fecha = new Date()) {
+  return new Date(fecha.getTime() - 10 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function leerVistazoGuardado() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_VISTAZO));
+    return v && v.disponible && Array.isArray(v.puntos) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function guardarVistazo(v) {
+  try { localStorage.setItem(CLAVE_VISTAZO, JSON.stringify(v)); } catch {}
+}
+
+function htmlVistazo(v, { aviso = '' } = {}) {
+  const puntos = v.puntos.map((p, i) => `
+    <li class="vistazo-punto">
+      <span class="vistazo-num" aria-hidden="true">${i + 1}</span>
+      <div class="vistazo-contenido">
+        <h3>${esc(p.titulo)}</h3>
+        <p>${esc(p.texto)}</p>
+        ${p.importancia ? `<p class="vistazo-importa"><strong>Por qué importa:</strong> ${esc(p.importancia)}</p>` : ''}
+        <ul class="vistazo-fuentes" aria-label="Fuentes">
+          ${(p.fuentes || []).map(f => {
+            const url = urlSegura(f.urlFuente);
+            const texto = `<span class="vistazo-medio">${esc(f.fuente)}</span> ${esc(f.titulo)}`;
+            return `<li>${url
+              ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${texto}</a>`
+              : texto}</li>`;
+          }).join('')}
+        </ul>
+      </div>
+    </li>`).join('');
+  const medios = (v.medios || []).join(', ');
+  return `
+    ${aviso ? `<p class="vistazo-aviso">${esc(aviso)}</p>` : ''}
+    <ol class="vistazo-lista">${puntos}</ol>
+    <div class="vistazo-pie">
+      <p class="vistazo-nota">Resumen automático hecho con IA a partir de ${esc(v.basadoEn)} titulares de hoy${medios ? ` (${esc(medios)})` : ''}.
+        Puede contener errores: verifica siempre en las fuentes.</p>
+      <button class="btn-ver-geo" data-accion="ver-geo">Ver todos los titulares de geopolítica</button>
+    </div>`;
+}
+
+function htmlVistazoCargando() {
+  return `<p class="buscando"><span class="punto-carga"></span> Preparando el Vistazo de hoy… (puede tardar unos segundos)</p>
+    ${Array.from({ length: 3 }, () => `
+      <div class="skeleton vistazo-skeleton">
+        <div class="skeleton-linea corta"></div>
+        <div class="skeleton-linea larga"></div>
+        <div class="skeleton-linea"></div>
+      </div>`).join('')}`;
+}
+
+function htmlVistazoError(mensaje, { reintentar = true } = {}) {
+  return `
+    <div class="estado-error corto">
+      <p>${esc(mensaje)}</p>
+      ${reintentar ? '<button class="btn-reintentar" data-accion="reintentar-vistazo">Reintentar</button>' : ''}
+    </div>
+    <div class="vistazo-pie">
+      <button class="btn-ver-geo" data-accion="ver-geo">Ver los titulares de geopolítica</button>
+    </div>`;
+}
+
+function fechaVistazo(v) {
+  const texto = v.fechaLarga || v.dia || '';
+  return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : '';
+}
+
+let pidiendoVistazo = null;
+async function cargarVistazo() {
+  const dia = diaEdicion();
+  const guardado = leerVistazoGuardado();
+  if (guardado && guardado.dia === dia) {
+    vistazoFecha.textContent = fechaVistazo(guardado);
+    vistazoCuerpo.innerHTML = htmlVistazo(guardado);
+    return;
+  }
+
+  vistazoFecha.textContent = 'Hoy';
+  vistazoCuerpo.innerHTML = htmlVistazoCargando();
+  if (pidiendoVistazo) pidiendoVistazo.abort();
+  const control = new AbortController();
+  pidiendoVistazo = control;
+  try {
+    const resp = await fetch(`${URL_VISTAZO}?dia=${dia}`, { signal: control.signal });
+    const v = await resp.json().catch(() => null);
+    if (control !== pidiendoVistazo) return;
+    if (v && v.disponible && Array.isArray(v.puntos) && v.puntos.length) {
+      guardarVistazo(v);
+      vistazoFecha.textContent = fechaVistazo(v);
+      vistazoCuerpo.innerHTML = htmlVistazo(v);
+      return;
+    }
+    if (resp.status === 404) throw new Error('El Vistazo todavía no está publicado en Vercel.');
+    const sinReintento = v && (v.motivo === 'sin-clave' || v.motivo === 'pocas-noticias');
+    mostrarVistazoAnterior(guardado, (v && v.mensaje) || 'No se pudo preparar el Vistazo.', !sinReintento);
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    console.warn('Vistazo falló:', e);
+    const mensaje = !navigator.onLine
+      ? 'Sin conexión.'
+      : (e.message.includes('Vercel') ? e.message : 'No se pudo preparar el Vistazo.');
+    mostrarVistazoAnterior(guardado, mensaje, true);
+  } finally {
+    if (control === pidiendoVistazo) pidiendoVistazo = null;
+  }
+}
+
+// Si falla el de hoy pero hay uno guardado de otro día, se muestra con aviso
+function mostrarVistazoAnterior(guardado, mensaje, reintentar) {
+  if (guardado) {
+    vistazoFecha.textContent = fechaVistazo(guardado);
+    vistazoCuerpo.innerHTML = htmlVistazo(guardado, { aviso: `${mensaje} Mostrando el último Vistazo guardado.` });
+  } else {
+    vistazoFecha.textContent = 'Hoy';
+    vistazoCuerpo.innerHTML = htmlVistazoError(mensaje, { reintentar });
+  }
+}
+
+function abrirVistazo() {
+  if (panelVistazo.open) return;
+  if (typeof panelVistazo.showModal === 'function') panelVistazo.showModal();
+  else panelVistazo.setAttribute('open', '');
+  document.body.classList.add('sin-scroll');
+  vistazoCuerpo.scrollTop = 0;
+  // El botón "atrás" del teléfono cierra el panel en vez de salir de la app
+  try { history.pushState({ vistazo: true }, ''); } catch {}
+  cargarVistazo();
+}
+
+function cerrarVistazo() {
+  if (panelVistazo.open) panelVistazo.close();
+}
+
+panelVistazo.addEventListener('close', () => {
+  document.body.classList.remove('sin-scroll');
+  pidiendoVistazo?.abort();
+  if (history.state && history.state.vistazo) history.back();
+});
+window.addEventListener('popstate', () => {
+  if (panelVistazo.open) panelVistazo.close();
+});
+btnCerrarVistazo.addEventListener('click', cerrarVistazo);
+// Tocar fuera del contenido (el fondo del diálogo) también cierra
+panelVistazo.addEventListener('click', (e) => {
+  if (e.target === panelVistazo) cerrarVistazo();
+});
+vistazoCuerpo.addEventListener('click', (e) => {
+  if (e.target.closest('[data-accion="reintentar-vistazo"]')) {
+    try { localStorage.removeItem(CLAVE_VISTAZO); } catch {}
+    cargarVistazo();
+    return;
+  }
+  if (e.target.closest('[data-accion="ver-geo"]')) {
+    cerrarVistazo();
+    if (!barraBusqueda.hidden) cerrarBusqueda({ restaurar: false });
+    marcarChip('geopolitica');
+    aplicarFiltro('geopolitica');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
 
 // 11. AVISO SIN CONEXIÓN
 function actualizarAvisoOffline() {

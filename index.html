@@ -52,6 +52,7 @@
         <button class="btn-filtro" data-categoria="la-birria">La Birria</button>
         <button class="btn-filtro" data-categoria="mundo">Mundo</button>
         <button class="btn-filtro" data-categoria="vecinos">Vecinos</button>
+        <button class="btn-filtro" data-categoria="geopolitica">🌐 Geopolítica</button>
         <button class="btn-filtro" data-categoria="tecnologia">Tecnología</button>
         <button class="btn-filtro" data-categoria="favoritos">★ Favoritos</button>
       </nav>
@@ -77,6 +78,18 @@
     <p class="footer-nota">Titulares y extractos de cada medio, con enlace a la nota original.</p>
     <button class="btn-limpiar-cache" id="btn-limpiar-cache">Actualizar app</button>
   </footer>
+
+  <!-- VISTAZO GEOPOLÍTICO: panel a pantalla completa -->
+  <dialog class="panel-vistazo" id="panel-vistazo" aria-labelledby="vistazo-titulo">
+    <div class="vistazo-cabecera">
+      <div>
+        <h2 id="vistazo-titulo">🌐 Vistazo Geopolítico</h2>
+        <p class="vistazo-fecha" id="vistazo-fecha"></p>
+      </div>
+      <button class="btn-cerrar-vistazo" id="btn-cerrar-vistazo" aria-label="Cerrar el Vistazo">✕</button>
+    </div>
+    <div class="vistazo-cuerpo" id="vistazo-cuerpo"></div>
+  </dialog>
 
   <script src="app.js"></script>
 </body>

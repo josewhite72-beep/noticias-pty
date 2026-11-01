@@ -2,13 +2,13 @@
    SERVICE WORKER — Noticias_pty
    - App (HTML/CSS/JS/íconos): stale-while-revalidate
      → carga instantánea desde caché y se actualiza sola en segundo plano.
-   - Noticias (/api/noticias o JSON de ejemplo): network-first
+   - Noticias y Vistazo (/api/noticias, /api/vistazo o JSON de ejemplo): network-first
      → siempre lo más nuevo; si no hay señal, lo último guardado.
    - Imágenes: cache-first con límite de entradas
      → las fotos ya vistas se leen sin conexión.
    ============================================ */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE_APP = `noticias-pty-app-${VERSION}`;
 const CACHE_DATOS = `noticias-pty-datos-${VERSION}`;
 const CACHE_IMG = `noticias-pty-img-${VERSION}`;
